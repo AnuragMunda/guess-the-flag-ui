@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌍 Guess The Flag
 
-## Getting Started
+> A real-time multiplayer flag guessing game built with Next.js 14 App Router and Ably.
 
-First, run the development server:
+## 🎮 Overview
+
+**Flag Tastic Faceoff** is a fast-paced 1v1 geography trivia game where players compete to identify world flags in real-time. Featuring Ably-powered communication, smooth UI, and a competitive scoring system, it’s designed to test your flag knowledge and reflexes.
+
+- 🧠 Identify country flags
+- ⚡ Fast answers get more points
+- 🧍 1v1 multiplayer matchups
+- 🔄 Real-time updates using Ably Pub/Sub
+- 🥇 Leaderboard & match result summary
+
+---
+
+## 🧪 Tech Stack
+
+| Layer        | Tech                          |
+|--------------|-------------------------------|
+| Frontend     | Next.js 14 (App Router)       |
+| State        | React Hooks, Context API      |
+| Real-time    | Ably Realtime Messaging       |
+| Assets       | Country flags from `/public`  |
+| Hosting      | Vercel                        |
+
+---
+
+## 🚀 Features
+
+- Matchmaking via lobby room
+- Real-time round-by-round gameplay
+- Scoring logic with feedback
+  - ✅ +10 points for first correct
+  - ✅ +7 for correct (not first)
+  - ❌ 0 for wrong
+  - ⏰ 0 if unanswered
+- Leader/host logic for progressing rounds
+- Flag display with 4 multiple-choice options
+- Match summary screen with winners and rewards
+
+---
+
+## 🖥️ Project Structure
+
+```
+/app
+  /play            → Game page
+  /results         → Match result page
+/components        → Shared UI components
+/context/ably-provider.tsx → Ably context
+/public/flags      → Country flags SVGs
+/assets/countries.json → Country metadata
+```
+
+---
+
+## 🛠️ Getting Started
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/yourusername/flag-tastic-faceoff.git
+cd flag-tastic-faceoff
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+# or
+yarn
+```
+
+### 3. Set up Ably
+
+Create a `.env.local` file:
+
+```
+NEXT_PUBLIC_ABLY_API_KEY=your-ably-public-api-key
+```
+
+> 🔐 Make sure to only expose the public Ably API key (`[appId].[publicKey]` format)
+
+### 4. Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧠 Scoring Rules
 
-## Learn More
+| Action              | Points |
+|---------------------|--------|
+| First correct       | +10    |
+| Correct (not first) | +7     |
+| Wrong answer        | 0      |
+| No answer (timeout) | 0      |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📦 Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+You can easily deploy this app on [Vercel](https://vercel.com/) since it's a Next.js 14 App Router project.
 
-## Deploy on Vercel
+1. Push your repo to GitHub
+2. Connect to Vercel
+3. Set environment variable:
+   - `NEXT_PUBLIC_ABLY_API_KEY`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🧩 Credits
+
+- Country flags: [Flagpedia](https://flagpedia.net/download/api)
+- Real-time messaging: [Ably](https://ably.com/)
+- Built with ❤️ using React & Next.js
+
+---
+
+## 📜 License
+
+MIT License — Feel free to use, modify, and deploy.

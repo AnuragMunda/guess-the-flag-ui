@@ -124,7 +124,7 @@ export default function StartMenu() {
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <Trophy className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-3xl font-bold text-white">Flag Tastic Faceoff</h1>
+            <h1 className="text-3xl font-bold text-white">Guess The Flag</h1>
           </div>
           <WalletConnectButton />
         </div>
