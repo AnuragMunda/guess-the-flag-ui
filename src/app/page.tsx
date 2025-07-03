@@ -1,60 +1,135 @@
 'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coins, Play, Trophy, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-import WalletConnectButton from "@/components/wallet-connect-button";
-import { useWallet } from "@/context/wallet-context";
+import { useAbly } from '@/context/ably-provider';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Trophy, Coins, Play, Users, XCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import WalletConnectButton from '@/components/wallet-connect-button';
+import { useWallet } from '@solana/wallet-adapter-react';
 
-const StartMenu = () => {
-  const [isMatchmaking, setIsMatchmaking] = useState(false);
-  const { isConnected, vaultBalance } = useWallet();
+const MATCH_TIMEOUT_MS = 30_000;
+
+export default function StartMenu() {
+  const { ably } = useAbly();
+  const { publicKey } = useWallet();
   const router = useRouter();
 
-  const handleFindMatch = async () => {
-    if (!isConnected) {
-      alert('Please connect your wallet first!');
-      return;
-    }
+  const [isMatchmaking, setIsMatchmaking] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [matchFound, setMatchFound] = useState(false);
 
-    if (vaultBalance < 1) {
-      alert('Insufficient funds! You need at least 1 $GOR to play. Visit the Vault to deposit.');
-      return;
-    }
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cancelRef = useRef(false);
 
-    setIsMatchmaking(true);
-    // Simulate matchmaking
-    await new Promise(resolve => setTimeout(resolve, 3000));
+  const handleCancelMatchmaking = async () => {
+    if (!ably) return;
+    cancelRef.current = true;
+
+    const lobby = ably.channels.get('lobby');
+    await lobby.unsubscribe();
+    await lobby.presence.leave();
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
     setIsMatchmaking(false);
-    router.replace('/game');
+    setFeedback('Matchmaking cancelled.');
   };
+
+  const handleFindMatch = async () => {
+    if (!ably) return;
+    setFeedback(null);
+    setIsMatchmaking(true);
+    cancelRef.current = false;
+
+    const selfId =
+      ably.auth.clientId ||
+      ably.connection.id ||
+      (await new Promise<string>((res) =>
+        ably.connection.once('connected', () => res(ably.connection.id!))
+      ));
+
+    const walletId = publicKey?.toString() || `guest-${selfId}`;
+    const lobby = ably.channels.get('lobby');
+
+    await lobby.attach();
+    await lobby.presence.enter({ wallet: walletId, status: 'waiting' });
+
+    const members = await lobby.presence.get({ waitForSync: true });
+    const opponent = members.find(
+      (m) => m.clientId !== selfId && m.data?.status === 'waiting'
+    );
+
+    const imInitiator = (oppId: string) => selfId < oppId;
+
+    const startMatch = async (oppId: string) => {
+      const roomId = ['match', selfId, oppId].sort().join('-');
+      const matchChannel = ably.channels.get(roomId);
+
+      await lobby.publish('match:start', { roomId, seed: Date.now(), players: [selfId, oppId] });
+      await matchChannel.publish('match:start', { roomId, seed: Date.now(), players: [selfId, oppId] });
+
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      await lobby.presence.leave();
+
+      if (!cancelRef.current) {
+        setMatchFound(true);
+        setTimeout(() => router.replace(`/main?roomId=${roomId}`), 2000);
+      }
+    };
+
+    if (opponent && imInitiator(opponent.clientId!)) {
+      await startMatch(opponent.clientId!);
+      return;
+    }
+
+    const onMatchStart = (msg: any) => {
+      const { roomId, players } = msg.data;
+      if (!players.includes(selfId)) return;
+
+      lobby.unsubscribe('match:start', onMatchStart);
+      lobby.presence.leave();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+      if (!cancelRef.current) {
+        setMatchFound(true);
+        setTimeout(() => router.replace(`/main?roomId=${roomId}`), 2000);
+      }
+    };
+
+    lobby.subscribe('match:start', onMatchStart);
+
+    timeoutRef.current = setTimeout(() => {
+      lobby.unsubscribe('match:start', onMatchStart);
+      lobby.presence.leave();
+      if (!cancelRef.current) {
+        setIsMatchmaking(false);
+        setFeedback('No match found. Please try again.');
+      }
+    }, MATCH_TIMEOUT_MS);
+  };
+
+  if (matchFound) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-black text-white text-xl animate-pulse">
+        ✅ Match Found! Redirecting…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <Trophy className="w-8 h-8 text-yellow-500" />
             <h1 className="text-3xl font-bold text-white">Flag Tastic Faceoff</h1>
           </div>
-          <div className="flex items-center gap-4">
-            {isConnected && (
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
-                <div className="flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-yellow-500" />
-                  <span className="text-white font-semibold">{vaultBalance} $GOR</span>
-                </div>
-              </div>
-            )}
-            <WalletConnectButton />
-          </div>
+          <WalletConnectButton />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Main Game Card */}
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -63,49 +138,50 @@ const StartMenu = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-slate-300">Match Format:</p>
-                <ul className="text-sm space-y-1 text-slate-400">
-                  <li>• 5 Flag Rounds</li>
-                  <li>• 2 Players</li>
-                  <li>• 15 seconds per round</li>
-                  <li>• Entry fee: 1 $GOR</li>
-                </ul>
+              <ul className="text-sm text-slate-400 space-y-1">
+                <li>• 5 Flag Rounds</li>
+                <li>• 2 Players</li>
+                <li>• 15 seconds per round</li>
+                <li>• Entry fee: 1 $GOR</li>
+              </ul>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleFindMatch}
+                  disabled={isMatchmaking}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isMatchmaking ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Finding Match...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Find Match
+                    </span>
+                  )}
+                </Button>
+
+                {isMatchmaking && (
+                  <Button
+                    onClick={handleCancelMatchmaking}
+                    variant="outline"
+                    className="flex items-center gap-1 text-red-400 border-red-500 hover:bg-red-900/30"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Cancel
+                  </Button>
+                )}
               </div>
 
-              <Button
-                onClick={handleFindMatch}
-                disabled={isMatchmaking || !isConnected || vaultBalance < 1}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isMatchmaking ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Finding Match...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Find Match
-                  </div>
-                )}
-              </Button>
-
-              {!isConnected && (
-                <p className="text-yellow-400 text-sm text-center">
-                  Connect your wallet to play
-                </p>
-              )}
-
-              {isConnected && vaultBalance < 1 && (
-                <p className="text-red-400 text-sm text-center">
-                  Insufficient funds. Visit Vault to deposit.
-                </p>
+              {feedback && (
+                <p className="text-center text-sm text-yellow-400 mt-2">{feedback}</p>
               )}
             </CardContent>
           </Card>
 
-          {/* Vault Card */}
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -113,59 +189,22 @@ const StartMenu = () => {
                 Vault
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-slate-300">Manage your $GOR tokens</p>
-                <div className="bg-slate-800/50 rounded-lg p-3">
-                  <div className="text-2xl font-bold text-yellow-400">
-                    {isConnected ? `${vaultBalance} $GOR` : '--'}
-                  </div>
-                  <div className="text-sm text-slate-400">Vault Balance</div>
-                </div>
+            <CardContent>
+              <p className="text-slate-300">Manage your $GOR tokens</p>
+              <div className="bg-slate-800/50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-yellow-400">--</div>
+                <div className="text-sm text-slate-400">Vault Balance</div>
               </div>
-
               <Button
-                onClick={() => router.replace('/vault')}
+                className="w-full border-yellow-500 text-yellow-400 mt-2"
                 variant="outline"
-                className="w-full border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
               >
                 Manage Vault
               </Button>
             </CardContent>
           </Card>
         </div>
-
-        {/* Game Rules */}
-        <Card className="mt-6 bg-white/5 backdrop-blur-sm border-white/10 text-white">
-          <CardHeader>
-            <CardTitle>How to Play</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <h4 className="font-semibold text-blue-400 mb-2">Scoring</h4>
-                <ul className="space-y-1 text-slate-400">
-                  <li>• Correct (First try): +10 points</li>
-                  <li>• Correct (Second try): +7 points</li>
-                  <li>• Wrong answer: -5 points</li>
-                  <li>• Time up: 0 points</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-emerald-400 mb-2">Match Flow</h4>
-                <ul className="space-y-1 text-slate-400">
-                  <li>• Players alternate turns</li>
-                  <li>• 15 seconds per turn</li>
-                  <li>• 2 attempts per turn max</li>
-                  <li>• Highest score after 5 rounds wins</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
-};
-
-export default StartMenu;
+}

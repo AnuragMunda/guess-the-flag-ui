@@ -1,19 +1,13 @@
-interface Player {
-  id: number;
-  name: string;
-  score: number;
-  avatar: string;
-}
+import { PlayerInfo } from "@/app/main/page";
 
 interface PlayerBarProps {
-  players: Player[];
+  players: PlayerInfo[];
   timeLeft: number;
-  currentPlayer: number;
   currentRound?: number;
   totalRounds?: number;
 }
 
-const PlayerBar = ({ players, timeLeft, currentPlayer, currentRound = 1, totalRounds = 5 }: PlayerBarProps) => {
+const PlayerBar = ({ players, timeLeft, currentRound = 1, totalRounds = 5 }: PlayerBarProps) => {
   const formatTime = (seconds: number) => {
     return seconds.toString().padStart(2, '0');
   };
@@ -22,18 +16,12 @@ const PlayerBar = ({ players, timeLeft, currentPlayer, currentRound = 1, totalRo
     <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
       <div className="flex items-center justify-between">
         {/* Player 1 */}
-        <div className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${currentPlayer === 1
-            ? 'bg-blue-500/30 border-2 border-blue-400 scale-105'
-            : 'bg-white/5'
-          }`}>
+        <div className="flex items-center gap-3 p-3 rounded-xl transition-all duration-300 bg-blue-500/30 border-2 border-blue-400 scale-105">
           <div className="text-2xl">{players[0].avatar}</div>
           <div>
             <div className="font-semibold text-white">{players[0].name}</div>
             <div className="text-blue-400 font-bold">{players[0].score} pts</div>
           </div>
-          {currentPlayer === 1 && (
-            <div className="text-blue-400 animate-pulse">●</div>
-          )}
         </div>
 
         {/* Timer and Round */}
@@ -49,13 +37,7 @@ const PlayerBar = ({ players, timeLeft, currentPlayer, currentRound = 1, totalRo
         </div>
 
         {/* Player 2 */}
-        <div className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 ${currentPlayer === 2
-            ? 'bg-red-500/30 border-2 border-red-400 scale-105'
-            : 'bg-white/5'
-          }`}>
-          {currentPlayer === 2 && (
-            <div className="text-red-400 animate-pulse">●</div>
-          )}
+        <div className="flex items-center gap-3 p-3 rounded-xl transition-all duration-300 bg-red-500/30 border-2 border-red-400 scale-105">
           <div className="text-right">
             <div className="font-semibold text-white">{players[1].name}</div>
             <div className="text-red-400 font-bold">{players[1].score} pts</div>

@@ -2,7 +2,7 @@ interface FeedbackRowProps {
     feedback: {
         type: string;
         message: string;
-        score: number;
+        score?: number;
     } | null;
 }
 
@@ -51,11 +51,19 @@ const FeedbackRow = ({ feedback }: FeedbackRowProps) => {
                         <p className={`${styles.text} font-bold text-lg`}>{feedback.message}</p>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="text-white text-sm">Score</span>
-                            <span className={`font-bold text-lg ${feedback.score > 0 ? 'text-emerald-100' :
-                                feedback.score < 0 ? 'text-red-100' : 'text-slate-100'
-                                }`}>
-                                {feedback.score > 0 ? '+' : ''}{feedback.score}
-                            </span>
+                            {typeof feedback.score === 'number' && (
+                                <span
+                                    className={`font-bold text-lg ${feedback.score > 0
+                                            ? 'text-emerald-100'
+                                            : feedback.score < 0
+                                                ? 'text-red-100'
+                                                : 'text-slate-100'
+                                        }`}
+                                >
+                                    {feedback.score > 0 ? '+' : ''}
+                                    {feedback.score}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>

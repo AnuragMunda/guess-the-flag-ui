@@ -1,7 +1,7 @@
 interface OptionsGridProps {
     options: string[];
     onAnswer: (answer: string) => void;
-    gameState: 'playing' | 'feedback';
+    gameState: 'playing' | 'feedback' | 'finished';
     correctAnswer: string;
 }
 

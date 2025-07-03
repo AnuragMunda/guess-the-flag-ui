@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { WalletProvider } from "@/context/wallet-context";
+import "@solana/wallet-adapter-react-ui/styles.css";
+import { SolanaProvider } from "@/context/solana-provider";
+import { Providers } from "@/context/providers";
+// import { SocketProvider } from "@/context/socket-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,10 +31,12 @@ export default function RootLayout({
       <body suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <WalletProvider>
-          {children}
-        </WalletProvider>
+        <SolanaProvider>
+          <Providers>
+            {children}
+          </Providers>
+        </SolanaProvider>
       </body>
-    </html>
+    </html >
   );
 }

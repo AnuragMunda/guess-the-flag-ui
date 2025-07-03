@@ -1,8 +1,8 @@
-import Image, { StaticImageData } from "next/image";
+import Image from "next/image";
 
 interface FlagDisplayProps {
-    flagUrl: StaticImageData;
-    gameState: 'playing' | 'feedback';
+    flagUrl: string;
+    gameState: 'playing' | 'feedback' | 'finished';
 }
 
 const FlagDisplay = ({ flagUrl, gameState }: FlagDisplayProps) => {

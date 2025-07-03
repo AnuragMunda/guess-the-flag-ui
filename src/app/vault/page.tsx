@@ -7,17 +7,18 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, ArrowDown, ArrowUp, Coins } from "lucide-react";
 import { useRouter } from "next/navigation";
 import WalletConnectButton from "@/components/wallet-connect-button";
-import { useWallet } from "@/context/wallet-context";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 
 const Vault = () => {
     const [depositAmount, setDepositAmount] = useState('');
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { isConnected, vaultBalance, deposit, withdraw } = useWallet();
+    const { connection } = useConnection();
+    const { publicKey } = useWallet();
     const router = useRouter();
 
     const handleDeposit = async () => {
-        if (!isConnected) {
+        if (!connection || !publicKey) {
             alert('Please connect your wallet first!');
             return;
         }
@@ -30,7 +31,7 @@ const Vault = () => {
 
         setIsLoading(true);
         try {
-            await deposit(amount);
+            // await deposit(amount);
             setDepositAmount('');
             alert(`Successfully deposited ${amount} $GOR`);
         } catch (error) {
@@ -40,7 +41,7 @@ const Vault = () => {
     };
 
     const handleWithdraw = async () => {
-        if (!isConnected) {
+        if (!connection || !publicKey) {
             alert('Please connect your wallet first!');
             return;
         }
@@ -51,19 +52,19 @@ const Vault = () => {
             return;
         }
 
-        if (amount > vaultBalance) {
-            alert('Insufficient vault balance');
-            return;
-        }
+        // if (amount > vaultBalance) {
+        //     alert('Insufficient vault balance');
+        //     return;
+        // }
 
         setIsLoading(true);
-        try {
-            await withdraw(amount);
-            setWithdrawAmount('');
-            alert(`Successfully withdrew ${amount} $GOR`);
-        } catch (error) {
-            alert('Withdrawal failed');
-        }
+        // try {
+        //     await withdraw(amount);
+        //     setWithdrawAmount('');
+        //     alert(`Successfully withdrew ${amount} $GOR`);
+        // } catch (error) {
+        //     alert('Withdrawal failed');
+        // }
         setIsLoading(false);
     };
 
@@ -94,14 +95,14 @@ const Vault = () => {
                     <CardContent className="pt-6">
                         <div className="text-center">
                             <div className="text-4xl font-bold text-yellow-400 mb-2">
-                                {isConnected ? `${vaultBalance} $GOR` : '--'}
+                                {'--'}
                             </div>
                             <div className="text-slate-400">Your Vault Balance</div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {!isConnected ? (
+                {!connection ? (
                     <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
                         <CardContent className="pt-6 text-center">
                             <Coins className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
@@ -185,15 +186,15 @@ const Vault = () => {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setWithdrawAmount(vaultBalance.toString())}
+                                    onClick={() => setWithdrawAmount('0')}
                                     className="border-slate-600 text-slate-300 hover:bg-slate-700"
                                 >
-                                    Max: {vaultBalance} $GOR
+                                    Max:  $GOR
                                 </Button>
 
                                 <Button
                                     onClick={handleWithdraw}
-                                    disabled={isLoading || !withdrawAmount || vaultBalance === 0}
+                                    disabled={isLoading || !withdrawAmount}
                                     className="w-full bg-red-600 hover:bg-red-700"
                                 >
                                     {isLoading ? 'Processing...' : 'Withdraw'}

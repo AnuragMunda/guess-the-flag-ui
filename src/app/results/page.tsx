@@ -1,19 +1,62 @@
 'use client';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Medal, RotateCcw, Home } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Trophy, Medal, Home } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAbly } from '@/context/ably-provider';
+
+interface Player {
+    id: string;
+    name: string;
+    score: number;
+    avatar: string;
+}
 
 const GameResults = () => {
     const router = useRouter();
+    const [players, setPlayers] = useState<Player[]>([]);
+    const { ably } = useAbly();
 
-    // Mock results data - in real app this would come from game state
-    const results = {
-        player1: { name: "Player 1", score: 42, avatar: "👤" },
-        player2: { name: "Player 2", score: 35, avatar: "👥" },
-        winner: "Player 1"
-    };
+    useEffect(() => {
+        const getClientId = async () => {
+            if (!ably) return null;
+            if (ably.auth.clientId) return ably.auth.clientId;
+            if (ably.connection.id) return ably.connection.id;
+            return new Promise<string>((res) =>
+                ably.connection.once('connected', () => res(ably.connection.id!))
+            );
+        };
+
+        (async () => {
+            const me = await getClientId();                             // my id
+            const stored = localStorage.getItem('gtf:results');
+            if (!stored) {
+                router.replace('/');
+                return;
+            }
+
+            const raw: Player[] = JSON.parse(stored);
+
+            /** rename players: exactly one "You" (the current browser) */
+            const fixed = raw.map((p, idx) => {
+                if (p.id === me) return { ...p, name: 'You' };
+                // if some other record is already "You", rename it back:
+                if (p.name === 'You') return { ...p, name: `Player ${idx + 1}` };
+                return p;
+            });
+
+            setPlayers(fixed);
+        })();
+    }, [ably, router]);
+
+    if (players.length < 2) {
+        return <div className="text-white text-center p-8">Loading Results...</div>;
+    }
+
+    const winner = players.reduce((top, p) => (p.score > top.score ? p : top), players[0]);
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
@@ -38,44 +81,34 @@ const GameResults = () => {
                                     <Medal className="w-6 h-6 text-yellow-500" />
                                     <span className="text-xl font-bold text-yellow-400">Winner!</span>
                                 </div>
-                                <div className="text-2xl font-bold">{results.winner}</div>
-                                <div className="text-4xl">{results.player1.avatar}</div>
+                                <div className="text-2xl font-bold">{winner.name}</div>
+                                <div className="text-4xl">{winner.avatar}</div>
                             </div>
 
-                            {/* Scores */}
+                            {/* All Players */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div className={`p-4 rounded-lg text-center ${results.player1.name === results.winner
-                                    ? 'bg-emerald-500/20 border border-emerald-500/50'
-                                    : 'bg-slate-700/50'
-                                    }`}>
-                                    <div className="text-3xl mb-2">{results.player1.avatar}</div>
-                                    <div className="font-semibold">{results.player1.name}</div>
-                                    <div className="text-2xl font-bold text-blue-400">{results.player1.score}</div>
-                                </div>
-
-                                <div className={`p-4 rounded-lg text-center ${results.player2.name === results.winner
-                                    ? 'bg-emerald-500/20 border border-emerald-500/50'
-                                    : 'bg-slate-700/50'
-                                    }`}>
-                                    <div className="text-3xl mb-2">{results.player2.avatar}</div>
-                                    <div className="font-semibold">{results.player2.name}</div>
-                                    <div className="text-2xl font-bold text-red-400">{results.player2.score}</div>
-                                </div>
+                                {players.map((p) => (
+                                    <div
+                                        key={p.id}
+                                        className={`p-4 rounded-lg text-center ${p.id === winner.id
+                                            ? 'bg-emerald-500/20 border border-emerald-500/50'
+                                            : 'bg-slate-700/50'
+                                            }`}
+                                    >
+                                        <div className="text-3xl mb-2">{p.avatar}</div>
+                                        <div className={`font-semibold ${p.name === 'You' ? 'text-blue-300' : ''}`}>
+                                            {p.name}
+                                        </div>
+                                        <div className="text-2xl font-bold text-blue-400">{p.score}</div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button
-                        onClick={() => router.replace('/')}
-                        className="bg-blue-600 hover:bg-blue-700"
-                    >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Play Again
-                    </Button>
-
+                <div className="flex justify-center">
                     <Button
                         onClick={() => router.replace('/')}
                         variant="outline"
@@ -99,7 +132,7 @@ const GameResults = () => {
                             </div>
                             <div>
                                 <div className="text-slate-400">Match Duration</div>
-                                <div className="font-semibold">2:45</div>
+                                <div className="font-semibold">~2 min</div>
                             </div>
                             <div>
                                 <div className="text-slate-400">Entry Fee</div>
