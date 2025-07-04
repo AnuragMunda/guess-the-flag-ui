@@ -204,6 +204,25 @@ export default function StartMenu() {
             </CardContent>
           </Card>
         </div>
+        {/* Game Rules */}
+        <Card className="mt-6 bg-white/5 backdrop-blur-sm border-white/10 text-white">
+          <CardHeader>
+            <CardTitle>How to Play</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-semibold text-blue-400 mb-2">Scoring</h4>
+                <ul className="space-y-1 text-slate-400">
+                  <li>• Correct (First answer): +10 points</li>
+                  <li>• Correct (Second answer): +7 points</li>
+                  <li>• Wrong answer: 0 points</li>
+                  <li>• Time up: 0 points</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
